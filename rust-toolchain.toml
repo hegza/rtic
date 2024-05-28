@@ -7,4 +7,5 @@ targets = [
     "thumbv8m.base-none-eabi",
     "thumbv8m.main-none-eabi",
     "riscv32emc-unknown-none-elf",
+    "riscv32imc-unknown-none-elf",
 ]
