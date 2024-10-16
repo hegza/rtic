@@ -61,7 +61,7 @@ impl TimerBackend {
                 .cpu_int_enable()
                 .modify(|r, w| w.bits((1 << cpu_interrupt_number) | r.bits())); //enable the CPU interupt.
             let intr = INTERRUPT_CORE0::ptr();
-            let intr_prio_base = (*intr).cpu_int_pri_0().as_ptr();
+            let intr_prio_base = (*intr).cpu_int_pri(0).as_ptr();
 
             intr_prio_base
                 .offset(cpu_interrupt_number)
@@ -84,18 +84,11 @@ impl TimerQueueBackend for TimerBackend {
         peripherals
             .SYSTIMER
             .unit0_op()
-            .write(|w| w.timer_unit0_update().set_bit());
+            .write(|w| w.update().set_bit());
         // this must be polled until value is valid
-        while {
-            peripherals
-                .SYSTIMER
-                .unit0_op()
-                .read()
-                .timer_unit0_value_valid()
-                == false
-        } {}
-        let instant: u64 = (peripherals.SYSTIMER.unit0_value_lo().read().bits() as u64)
-            | ((peripherals.SYSTIMER.unit0_value_hi().read().bits() as u64) << 32);
+        while peripherals.SYSTIMER.unit0_op().read().value_valid() == false {}
+        let instant: u64 = (peripherals.SYSTIMER.unit0_value().lo().read().bits() as u64)
+            | ((peripherals.SYSTIMER.unit0_value().hi().read().bits() as u64) << 32);
         instant
     }
 
@@ -103,19 +96,19 @@ impl TimerQueueBackend for TimerBackend {
         let systimer = unsafe { esp32c3::Peripherals::steal() }.SYSTIMER;
         systimer
             .target0_conf()
-            .write(|w| w.target0_timer_unit_sel().set_bit());
+            .write(|w| w.timer_unit_sel().set_bit());
         systimer
             .target0_conf()
-            .write(|w| w.target0_period_mode().clear_bit());
+            .write(|w| w.period_mode().clear_bit());
         systimer
-            .target0_lo()
+            .trgt(0)
+            .lo()
             .write(|w| unsafe { w.bits((instant & 0xFFFFFFFF).try_into().unwrap()) });
         systimer
-            .target0_hi()
+            .trgt(0)
+            .hi()
             .write(|w| unsafe { w.bits((instant >> 32).try_into().unwrap()) });
-        systimer
-            .comp0_load()
-            .write(|w| w.timer_comp0_load().set_bit()); //sync period to comp register
+        systimer.comp0_load().write(|w| w.load().set_bit()); //sync period to comp register
         systimer.conf().write(|w| w.target0_work_en().set_bit());
         systimer.int_ena().write(|w| w.target0().set_bit());
     }

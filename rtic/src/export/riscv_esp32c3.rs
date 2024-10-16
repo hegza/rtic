@@ -156,7 +156,7 @@ pub fn enable(int: Interrupt, prio: u8, cpu_int_id: u8) {
             .cpu_int_enable()
             .modify(|r, w| w.bits((1 << cpu_interrupt_number) | r.bits())); //enable the CPU interupt.
         let intr = INTERRUPT_CORE0::ptr();
-        let intr_prio_base = (*intr).cpu_int_pri_0().as_ptr();
+        let intr_prio_base = (*intr).cpu_int_pri(0).as_ptr();
 
         intr_prio_base
             .offset(cpu_interrupt_number)
